@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FAFAFA">
+<title>倒带 REWIND — 把声音倒过来听</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FAFAFA;
+  --ink:#0A0A0A;
+  --gray:#6F6F69;
+  --seal:#D13427;
+  --hair:rgba(10,10,10,.55);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{height:100%}
+body{
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--seal);color:#fff}
+:focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+.serif{font-family:"Noto Serif SC","Songti SC","STSong",SimSun,serif}
+
+.masthead{
+  width:100%;
+  max-width:1280px;
+  margin:0 auto;
+  padding:30px 44px 0;
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+}
+.brand{font-size:16px;font-weight:600;letter-spacing:.28em;display:flex;align-items:baseline;gap:10px}
+.brand-en{font-size:10px;font-weight:400;letter-spacing:.5em;color:var(--gray);transform:translateY(-1px)}
+.mast-note{font-size:12px;color:var(--gray);letter-spacing:.08em}
+
+main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:9vh 24px 10vh;
+}
+
+.panel-label{
+  align-self:center;
+  font-size:12px;
+  color:var(--gray);
+  letter-spacing:.14em;
+  margin-bottom:14px;
+}
+.frame{
+  position:relative;
+  width:min(620px,82vw);
+  height:236px;
+  border:1px solid var(--ink);
+  padding:30px 34px;
+}
+.frame canvas{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.frame-empty{
+  position:absolute;
+  left:0;right:0;top:50%;
+  transform:translateY(-50%);
+  text-align:center;
+  font-size:13px;
+  color:var(--gray);
+  letter-spacing:.2em;
+  pointer-events:none;
+}
+
+.action{
+  margin-top:52px;
+  display:flex;
+  flex-direction:row;
+  align-items:flex-start;
+  justify-content:center;
+  gap:56px;
+}
+.seal{
+  width:96px;height:96px;
+  border-radius:50%;
+  border:none;
+  background:var(--seal);
+  color:#fff;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  transition:transform .12s cubic-bezier(.2,.8,.2,1),background .2s ease;
+  -webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.seal.ink{background:var(--ink)}
+.seal.ink:hover{background:#202020}
+.seal:hover{background:#BF2E22}
+.seal:active{transform:scale(.9)}
+.seal-word{font-size:13px;letter-spacing:.3em;text-indent:.3em}
+.seal .hidden{display:none}
+.status{
+  margin-top:22px;
+  font-size:13px;
+  color:var(--gray);
+  letter-spacing:.06em;
+  min-height:1.6em;
+  text-align:center;
+}
+
+.pitch{
+  margin-top:64px;
+  width:min(440px,86vw);
+  display:flex;
+  align-items:flex-end;
+  gap:20px;
+}
+.pitch-scale{
+  position:relative;
+  flex:1;
+  height:46px;
+  -webkit-user-select:none;user-select:none;
+}
+.pitch-rule{position:absolute;left:18px;right:18px;top:24px;height:1px;background:var(--hair)}
+.pitch-tick{
+  position:absolute;top:24px;width:1px;height:6px;
+  background:var(--hair);transform:translateX(-50%);
+}
+.pitch-tick.zero{height:10px;background:var(--ink)}
+.tick-label{
+  position:absolute;top:36px;font-size:12px;color:var(--gray);
+  letter-spacing:.06em;transform:translateX(-50%);
+}
+.tick-label.left{left:18px}
+.tick-label.mid{left:50%}
+.tick-label.right{left:auto;right:18px;transform:translateX(50%)}
+.pitch-scale input[type=range]{
+  position:absolute;inset:0;width:100%;
+  opacity:0;margin:0;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+}
+.pitch-thumb{
+  position:absolute;top:24px;left:50%;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--ink);
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+.pitch-readout{
+  font-size:14px;letter-spacing:.04em;
+  min-width:72px;text-align:right;
+  white-space:nowrap;
+}
+
+.controls{
+  margin-top:56px;
+  display:flex;
+  gap:32px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.linkbtn{
+  position:relative;
+  border:none;background:transparent;
+  font-size:14px;
+  color:var(--ink);
+  font-family:inherit;
+  letter-spacing:.1em;
+  padding:4px 0;
+  cursor:pointer;
+  -webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.linkbtn::after{
+  content:"";
+  position:absolute;left:0;right:0;bottom:0;
+  height:1px;background:var(--ink);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .25s ease;
+}
+.linkbtn:hover::after,.linkbtn:focus-visible::after{transform:scaleX(1)}
+.linkbtn:focus-visible{outline-offset:4px}
+.rec-dot{
+  display:none;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--seal);
+  vertical-align:1px;margin-right:9px;
+}
+.rec-dot.on{display:inline-block;animation:breath 1.2s ease-in-out infinite}
+@keyframes breath{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+.colophon{
+  padding:0 24px 34px;
+  text-align:center;
+  font-size:12px;
+  color:var(--gray);
+  letter-spacing:.05em;
+}
+
+.toast{
+  position:fixed;
+  bottom:32px;left:50%;
+  transform:translateX(-50%) translateY(6px);
+  background:#fff;
+  border:1px solid var(--hair);
+  color:var(--ink);
+  font-size:13px;
+  letter-spacing:.05em;
+  padding:10px 20px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .3s ease,transform .3s ease;
+  white-space:nowrap;
+  z-index:60;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.mast-right{display:flex;align-items:baseline;gap:18px}
+.log-badge{
+  display:inline-block;
+  min-width:16px;
+  margin-left:6px;
+  padding:0 5px;
+  font-size:11px;
+  line-height:16px;
+  border:1px solid var(--hair);
+  border-radius:8px;
+  color:var(--gray);
+  vertical-align:1px;
+}
+
+.log-mask{
+  position:fixed;inset:0;z-index:70;
+  background:rgba(10,10,10,.25);
+  opacity:0;pointer-events:none;
+  transition:opacity .25s ease;
+}
+.log-mask.show{opacity:1;pointer-events:auto}
+.log-panel{
+  position:fixed;
+  top:0;right:0;bottom:0;
+  width:min(340px,100vw);
+  z-index:71;
+  background:#fff;
+  border-left:1px solid var(--hair);
+  display:flex;
+  flex-direction:column;
+  transform:translateX(102%);
+  transition:transform .28s cubic-bezier(.2,.8,.2,1);
+}
+.log-panel.open{transform:translateX(0)}
+.log-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  padding:26px 26px 20px;
+  border-bottom:1px solid var(--hair);
+}
+.log-title{font-size:18px;letter-spacing:.22em}
+.log-sub{font-size:12px;color:var(--gray);letter-spacing:.05em;margin-top:6px}
+.log-list{
+  flex:1;
+  overflow-y:auto;
+  padding:6px 0;
+}
+.log-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 26px;
+  border-bottom:1px solid rgba(10,10,10,.08);
+}
+.log-kind{
+  flex:none;
+  width:8px;height:8px;border-radius:50%;
+  background:var(--gray);
+}
+.log-kind.k-record{background:var(--seal)}
+.log-kind.k-upload{background:var(--ink)}
+.log-kind.k-demo{background:#B8B8B2}
+.log-main{flex:1;min-width:0}
+.log-name{
+  font-size:14px;
+  letter-spacing:.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.log-meta{font-size:12px;color:var(--gray);letter-spacing:.05em;margin-top:2px}
+.log-ops{flex:none;display:flex;gap:14px}
+.log-ops .linkbtn{font-size:12px;letter-spacing:.08em}
+.log-ops .linkbtn.dim{color:var(--gray)}
+.log-ops .linkbtn.dim:hover{color:var(--ink)}
+.log-empty{
+  padding:40px 26px;
+  text-align:center;
+  font-size:13px;
+  color:var(--gray);
+  letter-spacing:.1em;
+}
+.log-empty.hidden{display:none}
+
+.drop-overlay{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(250,250,250,.94);
+  opacity:0;pointer-events:none;
+  transition:opacity .18s ease;
+  display:flex;align-items:center;justify-content:center;
+}
+.drop-overlay.show{opacity:1}
+.drop-inset{
+  position:absolute;inset:18px;
+  border:1px solid var(--ink);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:8px;
+}
+.drop-title{font-size:20px;letter-spacing:.3em}
+.drop-sub{font-size:13px;color:var(--gray);letter-spacing:.1em}
+
+@media (max-width:768px){
+  .masthead{padding:24px 28px 0}
+  .frame{width:88vw;height:190px}
+  .action{margin-top:44px}
+  .pitch{margin-top:52px}
+  .controls{margin-top:44px;gap:26px}
+  main{padding-top:7vh}
+}
+@media (max-width:375px){
+  .masthead{padding:20px 20px 0}
+  .brand{font-size:14px}
+  .mast-note{display:none}
+  .frame{width:calc(100vw - 36px);height:150px;padding:20px 22px}
+  .seal{width:88px;height:88px}
+  .pitch{width:calc(100vw - 48px);gap:14px}
+  .controls{gap:20px;row-gap:12px}
+  main{padding:6vh 18px 8vh}
+  .colophon{padding-bottom:24px;line-height:1.9}
+  .toast{max-width:86vw;white-space:normal;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="brand serif">倒带<span class="brand-en">REWIND</span></div>
+  <div class="mast-right">
+    <span class="mast-note">把声音倒过来听，听出另一个世界</span>
+    <button type="button" id="btnLog" class="linkbtn">记录<span class="log-badge" id="logCount">0</span></button>
+  </div>
+</header>
+
+<main>
+  <p class="panel-label" id="panelLabel">示例旋律 · 5.5 秒</p>
+
+  <figure class="frame" id="frame">
+    <canvas id="wave" aria-hidden="true"></canvas>
+    <div class="frame-empty" id="frameEmpty" hidden>正在解码</div>
+  </figure>
+
+  <section class="action">
+    <button type="button" id="btnMainPlay" class="seal ink" aria-label="播放或暂停">
+      <svg id="iconPlay" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false">
+        <path d="M8.5 5.5 L8.5 18.5 L18.5 12 Z" fill="currentColor"></path>
+      </svg>
+      <svg id="iconPause" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false" class="hidden">
+        <rect x="6.5" y="5.5" width="3.8" height="13" fill="currentColor"></rect>
+        <rect x="13.7" y="5.5" width="3.8" height="13" fill="currentColor"></rect>
+      </svg>
+      <span class="seal-word serif">播放</span>
+    </button>
+    <button type="button" id="btnReverse" class="seal" aria-label="倒放">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+        <path d="M10 5 L10 19 L20.5 12 Z" fill="currentColor"></path>
+        <rect x="4.2" y="5.4" width="2.6" height="13.2" fill="currentColor"></rect>
+      </svg>
+      <span class="seal-word serif">倒放</span>
+    </button>
+  </section>
+  <p class="status" id="status" role="status" aria-live="polite">正向播放</p>
+
+  <section class="pitch" aria-label="变调">
+    <div class="pitch-scale" id="pitchScale">
+      <div class="pitch-rule"></div>
+      <div class="pitch-tick" style="left:18px"></div>
+      <div class="pitch-tick zero" style="left:50%"></div>
+      <div class="pitch-tick" style="left:auto;right:18px"></div>
+      <span class="tick-label left">-12</span>
+      <span class="tick-label mid">0</span>
+      <span class="tick-label right">+12</span>
+      <div class="pitch-thumb" id="pitchThumb"></div>
+      <input type="range" id="pitch" min="-12" max="12" step="1" value="0" aria-label="变调，负数为降调，正数为升调">
+    </div>
+    <div class="pitch-readout" id="pitchReadout">0 半音</div>
+  </section>
+
+  <nav class="controls">
+    <button type="button" id="btnDownload" class="linkbtn">下载 WAV</button>
+    <button type="button" id="btnRecord" class="linkbtn"><span class="rec-dot" id="recDot"></span><span id="recText">录音</span></button>
+    <button type="button" id="btnUpload" class="linkbtn">上传</button>
+  </nav>
+  <input type="file" id="fileInput" accept="audio/*" hidden>
+</main>
+
+<div class="drop-overlay" id="dropOverlay" aria-hidden="true">
+  <div class="drop-inset">
+    <p class="drop-title serif">松开，把声音倒过来</p>
+    <p class="drop-sub">载入后立即显示波形</p>
+  </div>
+</div>
+
+<div class="log-mask" id="logMask" aria-hidden="true"></div>
+<aside class="log-panel" id="logPanel" aria-label="记录">
+  <div class="log-head">
+    <div>
+      <p class="log-title serif">记录</p>
+      <p class="log-sub">仅保存在本页，关闭页面即自动删除</p>
+    </div>
+    <button type="button" id="btnLogClear" class="linkbtn">清空</button>
+  </div>
+  <div class="log-list" id="logList"></div>
+  <p class="log-empty" id="logEmpty">还没有记录</p>
+</aside>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<footer class="colophon">功能说明：录音、上传或直接拖入音频文件；波形可点按或拖动定位（如同手机录音条）；一键倒放、拖动滑块变调，结果可下载为 WAV（含倒放与变调）— 双击打开此页即可体验示例旋律</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var wave = $('#wave');
+  var frame = $('#frame');
+  var statusEl = $('#status');
+  var panelLabel = $('#panelLabel');
+  var frameEmpty = $('#frameEmpty');
+  var pitchInput = $('#pitch');
+  var pitchThumb = $('#pitchThumb');
+  var pitchReadout = $('#pitchReadout');
+  var pitchScale = $('#pitchScale');
+  var btnMainPlay = $('#btnMainPlay');
+  var iconPlay = $('#iconPlay');
+  var iconPause = $('#iconPause');
+  function updatePlayIcon(playing) {
+    iconPlay.classList.toggle('hidden', playing);
+    iconPause.classList.toggle('hidden', !playing);
+  }
+  var btnReverse = $('#btnReverse');
+  var btnDownload = $('#btnDownload');
+  var btnRecord = $('#btnRecord');
+  var btnUpload = $('#btnUpload');
+  var fileInput = $('#fileInput');
+  var btnLog = $('#btnLog');
+  var logCount = $('#logCount');
+  var logPanel = $('#logPanel');
+  var logMask = $('#logMask');
+  var logList = $('#logList');
+  var logEmpty = $('#logEmpty');
+  var btnLogClear = $('#btnLogClear');
+  var recText = $('#recText');
+  var recDot = $('#recDot');
+
+  var S = {
+    ctx: null,
+    buffer: null,
+    srcName: '示例旋律',
+    reversed: false,
+    semi: 0,
+    rate: 1,
+    playing: false,
+    pausedPos: 0,
+    startAt: 0,
+    src: null,
+    peaks: null,
+    peakW: 0,
+    scrubbing: false,
+    scrubbedFrac: 0,
+    history: [],
+    buffers: {}
+  };
+
+  var AC = window.AudioContext || window.webkitAudioContext;
+
+  function ensureCtx() {
+    if (!S.ctx && AC) {
+      S.ctx = new AC();
+    }
+    if (S.ctx && S.ctx.state === 'suspended') {
+      S.ctx.resume().catch(function () {});
+    }
+    return S.ctx;
+  }
+
+  function decodeBuffer(arr) {
+    var ctx = ensureCtx();
+    var p;
+    try {
+      p = ctx.decodeAudioData(arr);
+    } catch (e) {
+      p = undefined;
+    }
+    if (p && p.then) return p;
+    return new Promise(function (resolve, reject) {
+      ctx.decodeAudioData(arr, resolve, reject);
+    });
+  }
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove('show'); }, 3600);
+  }
+
+  function synthesizeMelody() {
+    var sr = 44100;
+    var notes = [
+      [523.25, 0,   0.5, 1.0],
+      [587.33, 0.5, 0.5, 0.9],
+      [659.25, 1.0, 0.5, 0.95],
+      [783.99, 1.5, 0.5, 0.9],
+      [659.25, 2.0, 0.5, 0.85],
+      [587.33, 2.5, 0.5, 0.9],
+      [880.00, 3.0, 0.4, 0.9],
+      [1046.5, 3.4, 0.6, 0.85],
+      [783.99, 4.0, 0.6, 0.8],
+      [698.46, 4.6, 0.9, 0.7]
+    ];
+    var total = 5.5;
+    var len = Math.round(total * sr);
+    var buf;
+    try {
+      if (typeof AudioBuffer === 'function') {
+        buf = new AudioBuffer({ length: len, sampleRate: sr, numberOfChannels: 1 });
+      }
+    } catch (e) {
+      buf = null;
+    }
+    if (!buf || typeof buf.getChannelData !== 'function') {
+      buf = ensureCtx().createBuffer(1, len, sr);
+    }
+    var data = buf.getChannelData(0);
+    var i, j, t, note, e, env, val, nLen;
+    for (i = 0; i < data.length; i++) {
+      data[i] = 0;
+    }
+    for (j = 0; j < notes.length; j++) {
+      note = notes[j];
+      nLen = Math.round(note[2] * sr);
+      var start = Math.round(note[1] * sr);
+      for (i = 0; i < nLen && start + i < len; i++) {
+        t = note[1] + i / sr;
+        env = 1;
+        if (i < sr * 0.014) env *= i / (sr * 0.014);
+        var rem = note[2] - i / sr;
+        if (rem < 0.16) env *= Math.max(0, rem / 0.16);
+        val = (Math.sin(2 * Math.PI * note[0] * t) +
+               0.3 * Math.sin(4 * Math.PI * note[0] * t) +
+               0.12 * Math.sin(6 * Math.PI * note[0] * t)) * env * note[3] * 0.55;
+        data[start + i] += val;
+      }
+    }
+    for (i = 0; i < len; i++) {
+      e = 1;
+      if (i < sr * 0.02) e = i / (sr * 0.02);
+      var rem2 = (len - i) / sr;
+      if (rem2 < 0.28) e *= rem2 / 0.28;
+      data[i] *= e;
+    }
+    var max = 0;
+    for (i = 0; i < len; i++) {
+      var a = Math.abs(data[i]);
+      if (a > max) max = a;
+    }
+    if (max > 0) {
+      var k = 0.9 / max;
+      for (i = 0; i < len; i++) data[i] *= k;
+    }
+    return buf;
+  }
+
+  function reverseBuffer(buf) {
+    var ctx = ensureCtx();
+    var out = ctx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
+    var c, i;
+    for (c = 0; c < buf.numberOfChannels; c++) {
+      var src = buf.getChannelData(c);
+      var dst = out.getChannelData(c);
+      var L = buf.length;
+      for (i = 0; i < L; i++) {
+        dst[i] = src[L - 1 - i];
+      }
+    }
+    return out;
+  }
+
+  function computePeaks(buf, n) {
+    var ch = buf.numberOfChannels;
+    var len = buf.length;
+    var p = new Float32Array(n);
+    var c, i, b, v;
+    for (c = 0; c < ch; c++) {
+      var d = buf.getChannelData(c);
+      for (i = 0; i < len; i++) {
+        b = (i * n / len) | 0;
+        v = Math.abs(d[i]);
+        if (v > p[b]) p[b] = v;
+      }
+    }
+    return p;
+  }
+
+  function drawWave(frac) {
+    if (!S.buffer) return;
+    var dpr = window.devicePixelRatio || 1;
+    var cssW = wave.clientWidth;
+    var cssH = wave.clientHeight;
+    if (cssW < 2 || cssH < 2) return;
+    if (!S.peaks || S.peakW !== cssW) {
+      S.peaks = computePeaks(S.buffer, Math.floor(cssW));
+      S.peakW = cssW;
+    }
+    var pw = Math.max(1, Math.round(cssW * dpr));
+    var ph = Math.max(1, Math.round(cssH * dpr));
+    if (wave.width !== pw || wave.height !== ph) {
+      wave.width = pw;
+      wave.height = ph;
+    }
+    var ctx = wave.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    var peaks = S.peaks;
+    var max = 0;
+    var i;
+    for (i = 0; i < peaks.length; i++) {
+      if (peaks[i] > max) max = peaks[i];
+    }
+    ctx.fillStyle = '#0A0A0A';
+    var cy = cssH / 2;
+    var half = max > 0 ? 0.42 * cssH : 0;
+    var x;
+    for (i = 0; i < peaks.length; i++) {
+      var h = (peaks[i] / max) * half;
+      if (h < 0.5 && h > 0) h = 0.5;
+      if (h <= 0) continue;
+      x = i + 0.5;
+      ctx.fillRect(x, cy - h, 1, h * 2);
+    }
+    if (typeof frac === 'number' && frac >= 0 && frac <= 1) {
+      x = frac * cssW;
+      ctx.fillStyle = '#0A0A0A';
+      ctx.fillRect(x, 0, 1, cssH);
+    }
+  }
+
+  function updateStatus() {
+    if (!S.buffer) return;
+    var dir = S.reversed ? '已倒放' : '正向播放';
+    var ply = S.playing ? '播放中 · ' : '';
+    statusEl.textContent = ply + dir + ' · ' + S.buffer.duration.toFixed(1) + ' 秒';
+  }
+
+  function setPanel() {
+    if (!S.buffer) return;
+    panelLabel.textContent = S.srcName + ' · ' + S.buffer.duration.toFixed(1) + ' 秒';
+  }
+
+  function stopSource() {
+    var s = S.src;
+    S.src = null;
+    if (s) {
+      try { s.stop(); } catch (e) {}
+    }
+  }
+
+  var tickRaF = null;
+  function tick() {
+    if (tickRaF) cancelAnimationFrame(tickRaF);
+    tickRaF = null;
+    if (S.scrubbing) {
+      drawWave(S.scrubbedFrac);
+      return;
+    }
+    if (!S.playing || !S.buffer) {
+      drawWave();
+      return;
+    }
+    var pos = S.pausedPos + (S.ctx.currentTime - S.startAt) * S.rate;
+    var frac = pos / S.buffer.duration;
+    if (frac >= 1) {
+      drawWave();
+      return;
+    }
+    drawWave(frac);
+    tickRaF = requestAnimationFrame(tick);
+  }
+
+  function startSource(fromPos) {
+    var ctx = ensureCtx();
+    if (!ctx || !S.buffer) return;
+    if (ctx.state !== 'running') {
+      ctx.resume().catch(function () {});
+    }
+    stopSource();
+    var src = ctx.createBufferSource();
+    src.buffer = S.buffer;
+    src.playbackRate.value = S.rate;
+    src.preservePitch = false;
+    src.connect(ctx.destination);
+    S.pausedPos = Math.max(0, Math.min(S.buffer.duration, fromPos));
+    S.startAt = ctx.currentTime;
+    S.playing = true;
+    S.src = src;
+    src.onended = function () {
+      if (S.src === src) {
+        S.src = null;
+        S.playing = false;
+        S.pausedPos = 0;
+        updatePlayIcon(false);
+        updateStatus();
+        drawWave();
+      }
+    };
+    src.start(0, S.pausedPos);
+    updatePlayIcon(true);
+    updateStatus();
+    tick();
+  }
+
+  function play() {
+    startSource(S.pausedPos);
+  }
+
+  function pause() {
+    if (!S.playing || !S.ctx || !S.buffer) return;
+    S.pausedPos += (S.ctx.currentTime - S.startAt) * S.rate;
+    S.playing = false;
+    stopSource();
+    updatePlayIcon(false);
+    updateStatus();
+    drawWave(S.buffer.duration > 0 ? S.pausedPos / S.buffer.duration : 0);
+  }
+
+  function togglePlay() {
+    if (S.playing) pause();
+    else play();
+  }
+
+  function applyReverse() {
+    if (!S.buffer) return;
+    stopSource();
+    S.playing = false;
+    S.pausedPos = 0;
+    S.buffer = reverseBuffer(S.buffer);
+    S.reversed = !S.reversed;
+    S.peaks = null;
+    S.peakW = 0;
+    updatePlayIcon(false);
+    updateStatus();
+    drawWave();
+    play();
+  }
+
+  function seek(sec) {
+    if (!S.buffer) return;
+    var dur = S.buffer.duration;
+    sec = Math.max(0, Math.min(dur, sec));
+    if (S.playing) {
+      startSource(sec);
+    } else {
+      S.pausedPos = sec;
+      updateStatus();
+      drawWave(dur > 0 ? sec / dur : 0);
+    }
+  }
+
+  var scrubbingFrac = function (ev) {
+    var r = wave.getBoundingClientRect();
+    var x = (ev.clientX - r.left) / r.width;
+    return Math.max(0, Math.min(1, x));
+  };
+  wave.addEventListener('pointerdown', function (ev) {
+    if (!S.buffer || S.scrubbing) return;
+    S.scrubbing = true;
+    S.scrubbedFrac = scrubbingFrac(ev);
+    if (wave.setPointerCapture) {
+      try { wave.setPointerCapture(ev.pointerId); } catch (e) {}
+    }
+    drawWave(S.scrubbedFrac);
+  });
+  window.addEventListener('pointermove', function (ev) {
+    if (!S.scrubbing) return;
+    S.scrubbedFrac = scrubbingFrac(ev);
+    drawWave(S.scrubbedFrac);
+  });
+  window.addEventListener('pointerup', function (ev) {
+    if (!S.scrubbing) return;
+    var frac = scrubbingFrac(ev);
+    S.scrubbing = false;
+    S.scrubbedFrac = 0;
+    if (S.buffer) seek(frac * S.buffer.duration);
+  });
+  window.addEventListener('pointercancel', function () {
+    if (!S.scrubbing) return;
+    S.scrubbing = false;
+    S.scrubbedFrac = 0;
+    drawWave();
+  });
+
+  function updateReadout() {
+    var v = S.semi;
+    pitchReadout.textContent = (v > 0 ? '+' : v < 0 ? '' : '') + Math.abs(v) + ' 半音';
+    var w = pitchScale.clientWidth;
+    var left = 18 + ((v + 12) / 24) * Math.max(0, w - 36);
+    pitchThumb.style.left = left + 'px';
+  }
+
+  function stopPlayback() {
+    S.playing = false;
+    S.pausedPos = 0;
+    stopSource();
+    updatePlayIcon(false);
+    drawWave();
+  }
+
+  function setAudio(buf, name, opts) {
+    opts = opts || {};
+    ++S.token;
+    if (S.recording) stopRecording(true);
+    stopPlayback();
+    S.buffer = buf;
+    S.srcName = name;
+    S.reversed = false;
+    S.semi = 0;
+    S.rate = 1;
+    pitchInput.value = 0;
+    updateReadout();
+    S.peaks = null;
+    S.peakW = 0;
+    frameEmpty.hidden = true;
+    setPanel();
+    updateStatus();
+    drawWave();
+    if (opts.log !== false && opts.kind) {
+      addLog(buf, name, opts.kind);
+    }
+  }
+
+  function addLog(buf, name, kind) {
+    var id = 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    S.history.unshift({ id: id, kind: kind, name: name, dur: buf.duration, t: Date.now() });
+    S.buffers[id] = buf;
+    var ids = Object.keys(S.buffers);
+    if (ids.length > 8) delete S.buffers[ids[0]];
+    if (S.history.length > 20) S.history.pop();
+    saveHistory();
+    renderLog();
+  }
+
+  function saveHistory() {
+    try {
+      var meta = S.history.map(function (h) {
+        return { id: h.id, kind: h.kind, name: h.name, dur: h.dur, t: h.t };
+      });
+      sessionStorage.setItem('rewind-log', JSON.stringify(meta));
+    } catch (e) {}
+  }
+
+  function loadHistory() {
+    try {
+      var raw = sessionStorage.getItem('rewind-log');
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr)) S.history = arr;
+      }
+    } catch (e) {}
+  }
+
+  function fmtLogTime(ts) {
+    var d = new Date(ts);
+    return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' +
+      (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+  }
+
+  function logKindLabel(k) {
+    return k === 'record' ? '录' : k === 'upload' ? '传' : '示';
+  }
+
+  function renderLog() {
+    logCount.textContent = S.history.length;
+    logEmpty.classList.toggle('hidden', S.history.length > 0);
+    logList.innerHTML = '';
+    S.history.forEach(function (h) {
+      var row = document.createElement('div');
+      row.className = 'log-row';
+      var kind = document.createElement('span');
+      kind.className = 'log-kind k-' + h.kind;
+      var main = document.createElement('div');
+      main.className = 'log-main';
+      var nm = document.createElement('p');
+      nm.className = 'log-name';
+      nm.textContent = logKindLabel(h.kind) + ' · ' + h.name;
+      var meta = document.createElement('p');
+      meta.className = 'log-meta';
+      meta.textContent = (h.dur ? h.dur.toFixed(1) + ' 秒 · ' : '') + fmtLogTime(h.t);
+      main.appendChild(nm);
+      main.appendChild(meta);
+      var ops = document.createElement('div');
+      ops.className = 'log-ops';
+      var play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'linkbtn';
+      play.textContent = S.buffers[h.id] ? '播放' : '已释放';
+      play.disabled = !S.buffers[h.id];
+      if (!S.buffers[h.id]) play.classList.add('dim');
+      play.addEventListener('click', function () {
+        var buf = S.buffers[h.id];
+        if (buf) {
+          setAudio(buf, h.name, { log: false });
+          closeLog();
+          toast('已切回「' + h.name + '」');
+        } else {
+          toast('该音频仅保存在本页，刷新后已释放，请重新载入');
+        }
+      });
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'linkbtn dim';
+      del.textContent = '删除';
+      del.addEventListener('click', function () {
+        delete S.buffers[h.id];
+        S.history = S.history.filter(function (x) { return x.id !== h.id; });
+        saveHistory();
+        renderLog();
+        toast('已删除「' + h.name + '」');
+      });
+      ops.appendChild(play);
+      ops.appendChild(del);
+      row.appendChild(kind);
+      row.appendChild(main);
+      row.appendChild(ops);
+      logList.appendChild(row);
+    });
+  }
+
+  function openLog() {
+    logPanel.classList.add('open');
+    logMask.classList.add('show');
+  }
+
+  function closeLog() {
+    logPanel.classList.remove('open');
+    logMask.classList.remove('show');
+  }
+
+  var recTimer = null;
+  var recStart = 0;
+  S.recording = false;
+  S.recorder = null;
+  S.token = 0;
+
+  function recTick() {
+    var el = (Date.now() - recStart) / 1000;
+    recText.textContent = '停止 ' + pad2(Math.floor(el / 60)) + ':' + pad2(Math.floor(el % 60));
+  }
+
+  function startRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast('当前浏览器不支持录音，请使用上传');
+      return;
+    }
+    if (!window.MediaRecorder) {
+      toast('当前浏览器不支持录音，请使用上传');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      S.recording = true;
+      var token = ++S.token;
+      recStart = Date.now();
+      recDot.classList.add('on');
+      recText.textContent = '停止 00:00';
+      recTimer = setInterval(recTick, 200);
+      var rec = null;
+      var types = ['audio/webm', 'audio/mp4', 'audio/ogg'];
+      var ti;
+      for (ti = 0; ti < types.length; ti++) {
+        try {
+          rec = new MediaRecorder(stream, { mimeType: types[ti] });
+          break;
+        } catch (e) {
+          rec = null;
+        }
+      }
+      if (!rec) {
+        try {
+          rec = new MediaRecorder(stream);
+        } catch (e) {
+          rec = null;
+        }
+      }
+      if (!rec) {
+        S.recording = false;
+        clearInterval(recTimer);
+        recDot.classList.remove('on');
+        recText.textContent = '录音';
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        toast('当前浏览器不支持录音，请使用上传');
+        return;
+      }
+      S.recorder = rec;
+      var chunks = [];
+      rec.ondataavailable = function (ev) {
+        if (ev.data && ev.data.size > 0) chunks.push(ev.data);
+      };
+      rec.onstop = function () {
+        S.recording = false;
+        clearInterval(recTimer);
+        recDot.classList.remove('on');
+        recText.textContent = '录音';
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        if (token !== S.token) return;
+        if (!chunks.length) {
+          toast('没有录到声音，请重试');
+          return;
+        }
+        var blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' });
+        frameEmpty.hidden = false;
+        blob.arrayBuffer().then(function (arr) {
+          return decodeBuffer(arr);
+        }).then(function (buf) {
+          setAudio(buf, '录制的声音', { kind: 'record' });
+          toast('已载入「录制的声音」');
+        }).catch(function () {
+          toast('无法解码录制的音频');
+        }).then(function () {
+          frameEmpty.hidden = true;
+        });
+      };
+      rec.start();
+    }).catch(function (err) {
+      var msg = (err && err.name === 'NotAllowedError')
+        ? '无法访问麦克风，请检查浏览器权限设置'
+        : '录音不可用（' + ((err && err.name) || '未知错误') + '）';
+      toast(msg);
+    });
+  }
+
+  function stopRecording(showNote) {
+    if (S.recorder && S.recorder.state !== 'inactive') {
+      S.recorder.stop();
+    }
+    if (showNote !== false) {
+      S.recording = false;
+      clearInterval(recTimer);
+      recDot.classList.remove('on');
+      recText.textContent = '录音';
+    }
+  }
+
+  function toggleRecord() {
+    if (S.recording) {
+      stopRecording(true);
+    } else {
+      startRecording();
+    }
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    var okType = /^audio\//.test(file.type) || /\.(mp3|wav|m4a|ogg|aac|flac|webm)$/i.test(file.name);
+    if (!okType) {
+      toast('这不是音频文件，换一个试试');
+      return;
+    }
+    frameEmpty.hidden = false;
+    file.arrayBuffer().then(function (arr) {
+      return decodeBuffer(arr);
+    }).then(function (buf) {
+      setAudio(buf, file.name, { kind: 'upload' });
+      toast('已载入「' + file.name + '」');
+    }).catch(function () {
+      toast('无法解码这段音频，换一个文件试试');
+      frameEmpty.hidden = true;
+    });
+  }
+
+  function renderAtRate(buf, rate) {
+    var Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!Offline || Math.abs(rate - 1) < 0.0001) {
+      return Promise.resolve(buf);
+    }
+    var len = Math.max(1, Math.round(buf.length / rate));
+    var off = new Offline(buf.numberOfChannels, len, buf.sampleRate);
+    var src = off.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    src.preservePitch = false;
+    src.connect(off.destination);
+    src.start(0);
+    try {
+      return off.startRendering();
+    } catch (e) {
+      return Promise.resolve(buf);
+    }
+  }
+
+  function writeWav(buf) {
+    var ch = buf.numberOfChannels;
+    var sr = buf.sampleRate;
+    var len = buf.length;
+    var bytes = 44 + len * ch * 2;
+    var ab = new ArrayBuffer(bytes);
+    var dv = new DataView(ab);
+    var writeStr = function (off, s) {
+      for (var i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i));
+    };
+    writeStr(0, 'RIFF');
+    dv.setUint32(4, bytes - 8, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    dv.setUint32(16, 16, true);
+    dv.setUint16(20, 1, true);
+    dv.setUint16(22, ch, true);
+    dv.setUint32(24, sr, true);
+    dv.setUint32(28, sr * ch * 2, true);
+    dv.setUint16(32, ch * 2, true);
+    dv.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    dv.setUint32(40, len * ch * 2, true);
+    var off = 44;
+    var i, c, v;
+    for (i = 0; i < len; i++) {
+      for (c = 0; c < ch; c++) {
+        v = buf.getChannelData(c)[i];
+        v = Math.max(-1, Math.min(1, v));
+        dv.setInt16(off, (v * 32767) | 0, true);
+        off += 2;
+      }
+    }
+    var extra = S.semi ? (S.semi > 0 ? '+' : '') + S.semi + '半音' : '';
+    var safeName = (S.srcName || '声音').replace(/[\\/:*?"<>|]/g, '_');
+    var blob = new Blob([ab], { type: 'audio/wav' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '倒带-' + safeName + (extra ? '-' + extra : '') + '.wav';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 800);
+    toast(S.semi ? '已下载「倒带-' + safeName + '」（含倒放与当前变调 ' + extra + '）' : '已下载「倒带-' + safeName + '.wav」');
+  }
+
+  function exportWav() {
+    if (!S.buffer) return;
+    renderAtRate(S.buffer, S.rate).then(function (buf) {
+      writeWav(buf);
+    }).catch(function () {
+      toast('导出失败，请重试');
+    });
+  }
+
+  var dragDepth = 0;
+  var overlay = $('#dropOverlay');
+
+  function hasFiles(ev) {
+    if (!ev.dataTransfer) return false;
+    var types = ev.dataTransfer.types || [];
+    for (var i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true;
+    }
+    return false;
+  }
+
+  document.addEventListener('dragenter', function (ev) {
+    ev.preventDefault();
+    if (hasFiles(ev)) {
+      dragDepth++;
+      overlay.classList.add('show');
+    }
+  });
+  document.addEventListener('dragleave', function (ev) {
+    ev.preventDefault();
+    if (dragDepth > 0) {
+      dragDepth--;
+      if (dragDepth === 0) overlay.classList.remove('show');
+    }
+  });
+  document.addEventListener('dragover', function (ev) {
+    ev.preventDefault();
+  });
+  document.addEventListener('drop', function (ev) {
+    ev.preventDefault();
+    dragDepth = 0;
+    overlay.classList.remove('show');
+    var f = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  btnReverse.addEventListener('click', function () { applyReverse(); });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.code === 'Space' && ev.target === document.body) {
+      ev.preventDefault();
+      togglePlay();
+    }
+    if (ev.key === 'Escape') closeLog();
+  });
+  btnMainPlay.addEventListener('click', function () { togglePlay(); });
+  btnLog.addEventListener('click', function () {
+    if (logPanel.classList.contains('open')) closeLog();
+    else openLog();
+  });
+  logMask.addEventListener('click', closeLog);
+  btnLogClear.addEventListener('click', function () {
+    S.history = [];
+    S.buffers = {};
+    saveHistory();
+    renderLog();
+    toast('已清空全部记录');
+  });
+  btnDownload.addEventListener('click', function () { exportWav(); });
+  btnRecord.addEventListener('click', function () { toggleRecord(); });
+  btnUpload.addEventListener('click', function () {
+    var f = fileInput.files[0];
+    if (f) {
+      fileInput.value = '';
+    }
+    fileInput.click();
+  });
+  fileInput.addEventListener('change', function () {
+    var f = fileInput.files[0];
+    fileInput.value = '';
+    if (f) handleFile(f);
+  });
+
+  pitchInput.addEventListener('input', function () {
+    var oldRate = S.rate;
+    S.semi = parseInt(pitchInput.value, 10) || 0;
+    S.rate = Math.pow(2, S.semi / 12);
+    if (S.playing && S.src && S.ctx) {
+      var pos = S.pausedPos + (S.ctx.currentTime - S.startAt) * oldRate;
+      var posSoFar = pos - S.pausedPos;
+      S.src.playbackRate.value = S.rate;
+      S.startAt = S.ctx.currentTime - posSoFar / S.rate;
+    }
+    updateReadout();
+  });
+
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { drawWave(); }, 150);
+  });
+
+  S.buffer = synthesizeMelody();
+  S.srcName = '示例旋律';
+  setPanel();
+  updateStatus();
+  drawWave();
+  loadHistory();
+  renderLog();
+})();
+</script>
+</body>
+</html>
